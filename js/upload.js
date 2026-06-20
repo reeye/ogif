@@ -2,6 +2,7 @@ import { addFrame, clearFrames } from './frames.js';
 
 const MIN_FRAMES = 2;
 const MAX_FRAMES = 5;
+const MAX_GIF_FRAMES = 16;
 
 /**
  * Wire up the upload drop-zone and file input.
@@ -92,7 +93,7 @@ async function handleGif(file, onFramesReady) {
     return;
   }
 
-  const count = Math.min(total, MAX_FRAMES);
+  const count = Math.min(total, MAX_GIF_FRAMES);
   const w = reader.width;
   const h = reader.height;
 
