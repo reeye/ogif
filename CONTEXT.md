@@ -1,7 +1,8 @@
-# ogif — Offline GIF - a Barrier-Grid Animation Tool
+# ogif — Offline GIF
 
-A browser-only tool for creating barrier-grid animations. Users supply 2–5 frames (or a GIF), and the tool produces a
-composite image and a matching barrier grid ready to print on a transparent sheet.
+**ogif** means *offline gif*: the output is a physical, printed animation that works without a screen or electricity. Slide a transparent overlay across the printed composite and it animates — like a gif, offline.
+
+The web tool itself runs in-browser and produces two printable images: a Composite Image and a Barrier Grid overlay.
 
 See: https://en.wikipedia.org/wiki/Barrier-grid_animation_and_stereography
 
