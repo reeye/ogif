@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ogif — Offline Barrier-Grid Animation</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>ogif</h1>
+    <p class="subtitle">
+      Create <a href="https://en.wikipedia.org/wiki/Barrier-grid_animation_and_stereography"
+        target="_blank" rel="noopener noreferrer">barrier-grid animations</a> — offline, in your browser.
+    </p>
+  </header>
+
+  <main>
+    <!-- Step 1: Upload -->
+    <section class="card" id="upload-section">
+      <h2>1. Upload frames</h2>
+      <div id="drop-zone" role="button" tabindex="0" aria-label="Upload area">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>Drop 2–5 images or a GIF here</p>
+        <label class="btn-secondary" for="file-input">Choose files</label>
+        <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+      </div>
+      <p id="upload-error" class="error" hidden></p>
+    </section>
+
+    <!-- Step 2: Arrange frames -->
+    <section class="card" id="frames-section" hidden>
+      <h2>2. Arrange frames</h2>
+      <p class="hint">Drag to reorder · Use <strong>Set first</strong> to designate the Starting Frame</p>
+      <div id="frame-strip" role="list" aria-label="Animation frames"></div>
+      <p id="resize-warning" class="warning" hidden>
+        ⚠ Some frames were resized to match the first frame's dimensions.
+      </p>
+    </section>
+
+    <!-- Step 3: Settings -->
+    <section class="card" id="settings-section" hidden>
+      <h2>3. Settings</h2>
+      <div class="settings-row">
+        <label>
+          Direction
+          <select id="direction-select">
+            <option value="columns">Columns (slide left / right)</option>
+            <option value="rows">Rows (slide up / down)</option>
+          </select>
+        </label>
+        <label>
+          Stripe width
+          <div class="input-inline">
+            <input type="number" id="stripe-width-input" value="3" min="1" max="100">
+            <span>px</span>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <!-- Generate -->
+    <div id="generate-bar" hidden>
+      <button type="button" id="generate-btn" class="btn-primary">Generate</button>
+    </div>
+
+    <!-- Step 4: Results -->
+    <section class="card" id="output-section" hidden>
+      <h2>4. Download</h2>
+      <div class="output-grid">
+        <div class="output-item">
+          <h3>Composite Image</h3>
+          <div class="canvas-wrap"><canvas id="composite-canvas"></canvas></div>
+          <a id="download-composite" class="btn-secondary" download="composite.png">↓ Download Composite</a>
+        </div>
+        <div class="output-item">
+          <h3>Barrier Grid</h3>
+          <div class="canvas-wrap checkered"><canvas id="barrier-canvas"></canvas></div>
+          <a id="download-barrier" class="btn-secondary" download="barrier-grid.png">↓ Download Barrier Grid</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Preview -->
+    <section class="card" id="preview-section" hidden>
+      <h2>Live Preview</h2>
+      <div class="canvas-wrap">
+        <canvas id="preview-canvas"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <!-- GIF decoder (omggif) -->
+  <script src="https://cdn.jsdelivr.net/npm/omggif@1.0.10/omggif.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
