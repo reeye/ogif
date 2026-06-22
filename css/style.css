@@ -255,8 +255,14 @@ h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
 }
 
 /* ── Preview ─────────────────────────────────── */
-#preview-section .canvas-wrap canvas {
-  max-height: 420px;
+#preview-container {
+  overflow: hidden;
+  border-radius: 6px;
+  line-height: 0;
+}
+#preview-container canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 /* ── Utility ─────────────────────────────────── */

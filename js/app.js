@@ -84,5 +84,5 @@ generateBtn.addEventListener('click', () => {
   outputSection.hidden  = false;
   previewSection.hidden = false;
 
-  startPreview(composite, frames.length, direction, stripeWidth);
+  startPreview(composite, barrier, direction);
 });

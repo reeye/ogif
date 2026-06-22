@@ -1,69 +1,109 @@
-let timerId = null;
+let cleanup = null;
 
 /**
- * Start the live preview animation.
- *
- * Draws compositeCanvas to the preview canvas, then overlays a sliding
- * Barrier Grid pattern. The grid slides 1 pixel per step so each frame is
- * visible for (stripeWidth × stepMs) ms.
+ * Render an interactive preview: composite image with the Barrier Grid
+ * overlaid and draggable in the slide direction.
  */
-export function startPreview(compositeCanvas, numFrames, direction, stripeWidth) {
+export function startPreview(compositeCanvas, barrierCanvas, direction) {
   stopPreview();
 
-  const canvas = document.getElementById('preview-canvas');
-  const ctx    = canvas.getContext('2d');
-  canvas.width  = compositeCanvas.width;
-  canvas.height = compositeCanvas.height;
+  const container = document.getElementById('preview-container');
+  const hint      = document.getElementById('preview-hint');
+  container.innerHTML = '';
 
-  const period = numFrames * stripeWidth;
-  const w = canvas.width;
-  const h = canvas.height;
-
-  // Build a 1-px tile representing one period of the barrier pattern.
-  // Transparent at positions 0..stripeWidth-1, opaque black afterwards.
-  const tile = document.createElement('canvas');
   const isColumns = direction === 'columns';
-  tile.width  = isColumns ? period : 1;
-  tile.height = isColumns ? 1 : period;
-  const tileCtx = tile.getContext('2d');
-  tileCtx.fillStyle = '#000';
-  if (isColumns) {
-    tileCtx.fillRect(stripeWidth, 0, period - stripeWidth, 1);
-  } else {
-    tileCtx.fillRect(0, stripeWidth, 1, period - stripeWidth);
+  const compW = compositeCanvas.width;
+  const compH = compositeCanvas.height;
+  const maxOffset = isColumns
+    ? barrierCanvas.width  - compW
+    : barrierCanvas.height - compH;
+
+  // ── Composite (static base) ──────────────────
+  const compEl = document.createElement('canvas');
+  compEl.width  = compW;
+  compEl.height = compH;
+  compEl.getContext('2d').drawImage(compositeCanvas, 0, 0);
+  compEl.style.display = 'block';
+
+  // ── Barrier grid (draggable overlay) ─────────
+  const barEl = document.createElement('canvas');
+  barEl.width  = barrierCanvas.width;
+  barEl.height = barrierCanvas.height;
+  barEl.getContext('2d').drawImage(barrierCanvas, 0, 0);
+  barEl.style.position = 'absolute';
+  barEl.style.top      = '0';
+  barEl.style.left     = '0';
+  barEl.style.pointerEvents = 'none';
+
+  // ── Wrapper sized to the composite ───────────
+  const wrap = document.createElement('div');
+  wrap.style.position = 'relative';
+  wrap.style.display  = 'inline-block';
+  wrap.style.cursor   = 'grab';
+  wrap.style.userSelect = 'none';
+  wrap.style.maxWidth = '100%';
+  wrap.appendChild(compEl);
+  wrap.appendChild(barEl);
+  container.appendChild(wrap);
+
+  hint.textContent = isColumns
+    ? '← Drag left or right to animate →'
+    : '↑ Drag up or down to animate ↓';
+
+  // ── Drag state ───────────────────────────────
+  let dragging  = false;
+  let dragStart = 0;
+  let offset    = 0;
+
+  function applyOffset(px) {
+    offset = Math.max(0, Math.min(maxOffset, px));
+    barEl.style.left = isColumns ? `${offset}px` : '0';
+    barEl.style.top  = isColumns ? '0' : `${offset}px`;
   }
-  const pattern = ctx.createPattern(tile, 'repeat');
 
-  // Step rate: slow enough to see each frame clearly.
-  const stepMs = Math.max(20, Math.round(600 / period));
-  let offset = 0;
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(compositeCanvas, 0, 0);
-
-    // Shift the repeating barrier pattern by `offset` pixels.
-    const matrix = new DOMMatrix();
-    if (isColumns) {
-      matrix.translateSelf(offset, 0);
-    } else {
-      matrix.translateSelf(0, offset);
-    }
-    pattern.setTransform(matrix);
-
-    ctx.fillStyle = pattern;
-    ctx.fillRect(0, 0, w, h);
-
-    offset = (offset + 1) % period;
-    timerId = setTimeout(draw, stepMs);
+  function onStart(primary) {
+    dragging  = true;
+    dragStart = primary - offset;
+    wrap.style.cursor = 'grabbing';
   }
 
-  draw();
+  function onMove(primary) {
+    if (!dragging) return;
+    applyOffset(primary - dragStart);
+  }
+
+  function onEnd() {
+    dragging = false;
+    wrap.style.cursor = 'grab';
+  }
+
+  // Mouse
+  const onMouseDown  = (e) => onStart(isColumns ? e.clientX : e.clientY);
+  const onMouseMove  = (e) => onMove(isColumns  ? e.clientX : e.clientY);
+
+  // Touch
+  const onTouchStart = (e) => { e.preventDefault(); onStart(isColumns ? e.touches[0].clientX : e.touches[0].clientY); };
+  const onTouchMove  = (e) => { e.preventDefault(); onMove(isColumns  ? e.touches[0].clientX : e.touches[0].clientY); };
+
+  wrap.addEventListener('mousedown',  onMouseDown);
+  wrap.addEventListener('touchstart', onTouchStart, { passive: false });
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup',   onEnd);
+  window.addEventListener('touchmove', onTouchMove, { passive: false });
+  window.addEventListener('touchend',  onEnd);
+
+  cleanup = () => {
+    wrap.removeEventListener('mousedown',  onMouseDown);
+    wrap.removeEventListener('touchstart', onTouchStart);
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup',   onEnd);
+    window.removeEventListener('touchmove', onTouchMove);
+    window.removeEventListener('touchend',  onEnd);
+  };
 }
 
 export function stopPreview() {
-  if (timerId !== null) {
-    clearTimeout(timerId);
-    timerId = null;
-  }
+  if (cleanup) { cleanup(); cleanup = null; }
+  const container = document.getElementById('preview-container');
+  if (container) container.innerHTML = '';
 }
