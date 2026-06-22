@@ -50,12 +50,20 @@ generateBtn.addEventListener('click', () => {
   const frames = getFrames();
   if (frames.length < MIN_FRAMES) return;
 
-  const direction  = directionSelect.value;
+  const direction   = directionSelect.value;
   const stripeWidth = Math.max(1, parseInt(stripeWidthInput.value, 10) || 3);
 
   const composite = generateComposite(frames, direction, stripeWidth);
-  const barrier   = generateBarrierGrid(
-    frames[0].width, frames[0].height,
+
+  // The Barrier Grid must extend beyond the composite so it can slide fully
+  // across without its edge entering the image area (+50% in the slide direction).
+  const imgW = frames[0].width;
+  const imgH = frames[0].height;
+  const barrierW = direction === 'columns' ? Math.ceil(imgW * 1.5) : imgW;
+  const barrierH = direction === 'rows'    ? Math.ceil(imgH * 1.5) : imgH;
+
+  const barrier = generateBarrierGrid(
+    barrierW, barrierH,
     frames.length, direction, stripeWidth
   );
 
