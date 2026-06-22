@@ -1,8 +1,9 @@
 let cleanup = null;
 
 /**
- * Render an interactive preview: composite image with the Barrier Grid
- * overlaid and draggable in the slide direction.
+ * Render an interactive preview on a single canvas.
+ * The composite is drawn first; the Barrier Grid is drawn on top at the
+ * current drag offset so its transparency reveals one frame at a time.
  */
 export function startPreview(compositeCanvas, barrierCanvas, direction) {
   stopPreview();
@@ -18,87 +19,85 @@ export function startPreview(compositeCanvas, barrierCanvas, direction) {
     ? barrierCanvas.width  - compW
     : barrierCanvas.height - compH;
 
-  // ── Composite (static base) ──────────────────
-  const compEl = document.createElement('canvas');
-  compEl.width  = compW;
-  compEl.height = compH;
-  compEl.getContext('2d').drawImage(compositeCanvas, 0, 0);
-  compEl.style.display = 'block';
+  // Single canvas sized to the composite
+  const canvas = document.createElement('canvas');
+  canvas.width  = compW;
+  canvas.height = compH;
+  canvas.style.display  = 'block';
+  canvas.style.maxWidth = '100%';
+  canvas.style.height   = 'auto';
+  canvas.style.cursor   = 'grab';
+  canvas.style.borderRadius = '6px';
+  container.appendChild(canvas);
 
-  // ── Barrier grid (draggable overlay) ─────────
-  const barEl = document.createElement('canvas');
-  barEl.width  = barrierCanvas.width;
-  barEl.height = barrierCanvas.height;
-  barEl.getContext('2d').drawImage(barrierCanvas, 0, 0);
-  barEl.style.position = 'absolute';
-  barEl.style.top      = '0';
-  barEl.style.left     = '0';
-  barEl.style.pointerEvents = 'none';
+  const ctx = canvas.getContext('2d');
+  let offset = 0;
 
-  // ── Wrapper sized to the composite ───────────
-  const wrap = document.createElement('div');
-  wrap.style.position = 'relative';
-  wrap.style.display  = 'inline-block';
-  wrap.style.cursor   = 'grab';
-  wrap.style.userSelect = 'none';
-  wrap.style.maxWidth = '100%';
-  wrap.appendChild(compEl);
-  wrap.appendChild(barEl);
-  container.appendChild(wrap);
+  function draw() {
+    ctx.clearRect(0, 0, compW, compH);
+    ctx.drawImage(compositeCanvas, 0, 0);
+    // Draw barrier shifted right/down by offset; its transparency reveals the composite
+    ctx.drawImage(barrierCanvas, isColumns ? offset : 0, isColumns ? 0 : offset);
+  }
+
+  draw();
 
   hint.textContent = isColumns
     ? '← Drag left or right to animate →'
     : '↑ Drag up or down to animate ↓';
 
-  // ── Drag state ───────────────────────────────
+  // ── Drag ─────────────────────────────────────
   let dragging  = false;
   let dragStart = 0;
-  let offset    = 0;
 
-  function applyOffset(px) {
-    offset = Math.max(0, Math.min(maxOffset, px));
-    barEl.style.left = isColumns ? `${offset}px` : '0';
-    barEl.style.top  = isColumns ? '0' : `${offset}px`;
+  function scaleOf() {
+    // Account for CSS scaling (max-width: 100%)
+    return isColumns
+      ? compW / canvas.getBoundingClientRect().width
+      : compH / canvas.getBoundingClientRect().height;
+  }
+
+  function clientPrimary(e) {
+    return isColumns ? e.clientX : e.clientY;
   }
 
   function onStart(primary) {
     dragging  = true;
-    dragStart = primary - offset;
-    wrap.style.cursor = 'grabbing';
+    dragStart = primary - offset / scaleOf();
+    canvas.style.cursor = 'grabbing';
   }
 
   function onMove(primary) {
     if (!dragging) return;
-    applyOffset(primary - dragStart);
+    const newOffset = (primary - dragStart) * scaleOf();
+    offset = Math.max(0, Math.min(maxOffset, newOffset));
+    draw();
   }
 
   function onEnd() {
     dragging = false;
-    wrap.style.cursor = 'grab';
+    canvas.style.cursor = 'grab';
   }
 
-  // Mouse
-  const onMouseDown  = (e) => onStart(isColumns ? e.clientX : e.clientY);
-  const onMouseMove  = (e) => onMove(isColumns  ? e.clientX : e.clientY);
-
-  // Touch
+  const onMouseDown  = (e) => onStart(clientPrimary(e));
+  const onMouseMove  = (e) => onMove(clientPrimary(e));
   const onTouchStart = (e) => { e.preventDefault(); onStart(isColumns ? e.touches[0].clientX : e.touches[0].clientY); };
   const onTouchMove  = (e) => { e.preventDefault(); onMove(isColumns  ? e.touches[0].clientX : e.touches[0].clientY); };
 
-  wrap.addEventListener('mousedown',  onMouseDown);
-  wrap.addEventListener('touchstart', onTouchStart, { passive: false });
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup',   onEnd);
-  window.addEventListener('touchmove', onTouchMove, { passive: false });
-  window.addEventListener('touchend',  onEnd);
+  canvas.addEventListener('mousedown',  onMouseDown);
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+  window.addEventListener('mousemove',  onMouseMove);
+  window.addEventListener('mouseup',    onEnd);
+  window.addEventListener('touchmove',  onTouchMove,  { passive: false });
+  window.addEventListener('touchend',   onEnd);
 
   cleanup = () => {
-    wrap.removeEventListener('mousedown',  onMouseDown);
-    wrap.removeEventListener('touchstart', onTouchStart);
-    window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('mouseup',   onEnd);
-    window.removeEventListener('touchmove', onTouchMove);
-    window.removeEventListener('touchend',  onEnd);
+    canvas.removeEventListener('mousedown',  onMouseDown);
+    canvas.removeEventListener('touchstart', onTouchStart);
+    window.removeEventListener('mousemove',  onMouseMove);
+    window.removeEventListener('mouseup',    onEnd);
+    window.removeEventListener('touchmove',  onTouchMove);
+    window.removeEventListener('touchend',   onEnd);
   };
 }
 
