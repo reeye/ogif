@@ -52,15 +52,18 @@ generateBtn.addEventListener('click', () => {
 
   const direction   = directionSelect.value;
   const stripeWidth = Math.max(1, parseInt(stripeWidthInput.value, 10) || 3);
+  const isCheckerboard = direction === 'checkerboard';
 
-  const composite = generateComposite(frames, direction, stripeWidth);
+  // Checkerboard uses its own composite generation path.
+  const compositeDirection = direction;
+  const composite = generateComposite(frames, compositeDirection, stripeWidth);
 
   // The Barrier Grid must extend beyond the composite so it can slide fully
   // across without its edge entering the image area (+50% in the slide direction).
   const imgW = frames[0].width;
   const imgH = frames[0].height;
-  const barrierW = direction === 'columns' ? Math.ceil(imgW * 1.5) : imgW;
-  const barrierH = direction === 'rows'    ? Math.ceil(imgH * 1.5) : imgH;
+  const barrierW = (direction === 'columns' || isCheckerboard) ? Math.ceil(imgW * 1.5) : imgW;
+  const barrierH = direction === 'rows' ? Math.ceil(imgH * 1.5) : imgH;
 
   const barrier = generateBarrierGrid(
     barrierW, barrierH,
@@ -84,5 +87,5 @@ generateBtn.addEventListener('click', () => {
   outputSection.hidden  = false;
   previewSection.hidden = false;
 
-  startPreview(composite, barrier, direction);
+  startPreview(composite, barrier, isCheckerboard ? 'columns' : direction);
 });
